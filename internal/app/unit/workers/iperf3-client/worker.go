@@ -2,6 +2,9 @@ package iperf3client
 
 import (
 	"context"
+	"encoding/json"
+	"fmt"
+	"os/exec"
 	"time"
 
 	"github.com/sirupsen/logrus"
@@ -52,13 +55,25 @@ func (t *Worker) run(ctx context.Context) error {
 	}
 
 	for i := range allNodes.Ip {
-		if err = t.measureSingleNode(allNodes.Ip[i]); err != nil {
+		if err = t.measureSingleNode(ctx, allNodes.Ip[i]); err != nil {
 			logrus.WithError(err).Errorf("measuring node %s", allNodes.Ip[i])
 		}
 	}
 	return nil
 }
 
-func (t *Worker) measureSingleNode(ip string) error {
+func (t *Worker) measureSingleNode(ctx context.Context, ip string) error {
+	data, err := exec.CommandContext(ctx, "iperf3", "-c", ip, "-p", "5201", "-t5", "--json").Output()
+	if err != nil {
+		return trace.FuncNameWithErrorMsg(err, "executing command")
+	}
+
+	var payload IperfJsonOut
+
+	if err = json.Unmarshal(data, &payload); err != nil {
+		return trace.FuncNameWithErrorMsg(err, "unmarshal")
+	}
+	fmt.Println(payload.End.SumReceived.BitsPerSecond)
+	fmt.Println(payload.End.SumSent.BitsPerSecond)
 	return nil
 }

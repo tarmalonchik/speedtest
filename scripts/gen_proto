@@ -1,0 +1,12 @@
+#!/usr/bin/env bash
+
+PROJECT_DIR=$(pwd)
+export PROJDIR
+
+BUF=$(which buf)
+export BUF
+
+export PROTO_PATH=${PROJECT_DIR}/api/proto
+
+${BUF} generate
+${BUF} generate --template buf.gen.postprocess.yaml

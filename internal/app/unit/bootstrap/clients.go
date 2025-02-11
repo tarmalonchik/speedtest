@@ -13,9 +13,9 @@ type ClientsContainer struct {
 	bankClient *client.BankClient
 }
 
-func getClients(_ context.Context, conf *config.Config) (clients *ClientsContainer, err error) {
+func getClients(ctx context.Context, conf *config.Config) (clients *ClientsContainer, err error) {
 	clients = &ClientsContainer{}
-	if clients.bankClient, err = client.NewBankClient(fmt.Sprintf("%s:%s", conf.Svc.BankHost, conf.Svc.BankHost)); err != nil {
+	if clients.bankClient, err = client.NewBankClient(fmt.Sprintf("%s:%s", conf.Svc.BankHost, conf.Svc.BankPort)); err != nil {
 		return nil, trace.FuncNameWithErrorMsg(err, "create bank client")
 	}
 	return clients, nil

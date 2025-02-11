@@ -8,16 +8,7 @@ import (
 	"github.com/sirupsen/logrus"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/reflection"
-
-	"github.com/tarmalonchik/speedtest/internal/pkg/hashsign"
 )
-
-type hashSigner interface {
-	SignRequest(body []byte) (hashsign.SignResponse, error)
-	CheckRequest(body []byte, opt ...hashsign.CheckOption) (bool, error)
-	WithTime(time string) hashsign.CheckOption
-	WithHash(hash string) hashsign.CheckOption
-}
 
 type Service struct {
 	keepalive          serverParameters

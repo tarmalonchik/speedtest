@@ -20,10 +20,6 @@ func NewWorker(conf Config) *Worker {
 }
 
 func (t *Worker) Run(ctx context.Context) error {
-	if t.conf.IsClient {
-		return nil
-	}
-
 	for {
 		select {
 		case <-ctx.Done():
@@ -31,14 +27,14 @@ func (t *Worker) Run(ctx context.Context) error {
 			return nil
 		default:
 			if err := t.run(ctx); err != nil {
-				logrus.WithError(err).Errorf("worker")
+				logrus.WithError(trace.FuncNameWithError(err)).Errorf("worker")
 			}
 		}
 	}
 }
 
 func (t *Worker) run(ctx context.Context) error {
-	cmd := exec.CommandContext(ctx, "iperf3", "-s")
+	cmd := exec.CommandContext(ctx, "iperf3", "-s", "-p", t.conf.Iperf3Port)
 	if err := cmd.Run(); err != nil {
 		return trace.FuncNameWithErrorMsg(err, "running iperf")
 	}

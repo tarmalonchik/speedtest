@@ -7,6 +7,8 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/sirupsen/logrus"
+
 	"github.com/tarmalonchik/speedtest/internal/pkg/trace"
 )
 
@@ -34,7 +36,7 @@ func NewService(
 	}
 }
 
-func (s *Service) UpdateNodeInCache(ctx context.Context, ip string) error {
+func (s *Service) UpdateNodeInCache(_ context.Context, ip string) error {
 	node := availableNode{
 		IP:        ip,
 		UpdatedAt: time.Now().UTC(),
@@ -48,7 +50,7 @@ func (s *Service) UpdateNodeInCache(ctx context.Context, ip string) error {
 	return nil
 }
 
-func (s *Service) GetAvailableNodes(ctx context.Context) (ips []string, err error) {
+func (s *Service) GetAvailableNodes(_ context.Context) (ips []string, err error) {
 	respRaw := s.cache.GetByPrefix(availableNodesPrefix)
 	var out = make([]availableNode, len(respRaw))
 
@@ -64,4 +66,46 @@ func (s *Service) GetAvailableNodes(ctx context.Context) (ips []string, err erro
 		}
 	}
 	return ips, nil
+}
+
+func (s *Service) AddNodesResults(_ context.Context, results []NodeResult) error {
+	now := time.Now().UTC()
+	for i := range results {
+		savedRaw, ok := s.cache.Get(fmt.Sprintf(nodeSpeedTemp, results[i].IP))
+		if ok {
+			var saved NodeResult
+			if err := json.Unmarshal(savedRaw, &saved); err != nil {
+				logrus.WithError(trace.FuncNameWithError(err)).Errorf("unmarshal for ip: %s", results[i].IP)
+				continue
+			}
+			if saved.CreatedAt.After(now.Add(-s.conf.MeasurementPeriod)) && saved.TotalSpeed() >= results[i].TotalSpeed() {
+				continue
+			}
+		}
+		dataRaw, err := json.Marshal(results[i])
+		if err != nil {
+			logrus.WithError(trace.FuncNameWithError(err)).Errorf("marshal for ip: %s", results[i].IP)
+			continue
+		}
+		s.cache.Add(fmt.Sprintf(nodeSpeedTemp, results[i].IP), dataRaw)
+	}
+	return nil
+}
+
+func (s *Service) GetNodeSpeed(_ context.Context, ipAddress string) (inbound, outbound int64) {
+	resultRaw, ok := s.cache.Get(fmt.Sprintf(nodeSpeedTemp, ipAddress))
+	if !ok {
+		return 0, 0
+	}
+
+	var result NodeResult
+	if err := json.Unmarshal(resultRaw, &result); err != nil {
+		logrus.WithError(trace.FuncNameWithError(err)).Errorf("unmarshal cache result for ip: %s", ipAddress)
+		return 0, 0
+	}
+
+	if result.CreatedAt.Before(time.Now().UTC().Add(-s.conf.MeasurementPeriod * 2)) {
+		return 0, 0
+	}
+	return result.InboundSpeed, result.OutboundSpeed
 }

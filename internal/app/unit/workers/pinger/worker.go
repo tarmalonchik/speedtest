@@ -28,10 +28,6 @@ func NewWorker(conf Config, bankCli bankCli) *Worker {
 }
 
 func (t *Worker) Run(ctx context.Context) error {
-	if t.conf.IsClient {
-		return nil
-	}
-
 	for {
 		select {
 		case <-ctx.Done():
@@ -48,7 +44,7 @@ func (t *Worker) run(ctx context.Context) {
 		IpAddress: t.conf.MyIpAddress,
 	})
 	if err != nil {
-		logrus.WithError(err).Errorf("sending ping request")
+		logrus.WithError(trace.FuncNameWithError(err)).Errorf("sending ping request")
 	} else {
 		logrus.Infof("ping success")
 	}

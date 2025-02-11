@@ -19,8 +19,10 @@ import (
 const _ = grpc.SupportPackageIsVersion7
 
 const (
-	BankService_Ping_FullMethodName           = "/sdk.BankService/Ping"
-	BankService_AvailableNodes_FullMethodName = "/sdk.BankService/AvailableNodes"
+	BankService_Ping_FullMethodName            = "/sdk.BankService/Ping"
+	BankService_AvailableNodes_FullMethodName  = "/sdk.BankService/AvailableNodes"
+	BankService_AddNodesResults_FullMethodName = "/sdk.BankService/AddNodesResults"
+	BankService_GetNodeSpeed_FullMethodName    = "/sdk.BankService/GetNodeSpeed"
 )
 
 // BankServiceClient is the client API for BankService service.
@@ -29,6 +31,8 @@ const (
 type BankServiceClient interface {
 	Ping(ctx context.Context, in *PingRequest, opts ...grpc.CallOption) (*PingResponse, error)
 	AvailableNodes(ctx context.Context, in *AvailableNodesRequest, opts ...grpc.CallOption) (*AvailableNodesResponse, error)
+	AddNodesResults(ctx context.Context, in *AddNodesResultsRequest, opts ...grpc.CallOption) (*AddNodesResultsResponse, error)
+	GetNodeSpeed(ctx context.Context, in *GetNodeSpeedRequest, opts ...grpc.CallOption) (*GetNodeSpeedResponse, error)
 }
 
 type bankServiceClient struct {
@@ -57,12 +61,32 @@ func (c *bankServiceClient) AvailableNodes(ctx context.Context, in *AvailableNod
 	return out, nil
 }
 
+func (c *bankServiceClient) AddNodesResults(ctx context.Context, in *AddNodesResultsRequest, opts ...grpc.CallOption) (*AddNodesResultsResponse, error) {
+	out := new(AddNodesResultsResponse)
+	err := c.cc.Invoke(ctx, BankService_AddNodesResults_FullMethodName, in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *bankServiceClient) GetNodeSpeed(ctx context.Context, in *GetNodeSpeedRequest, opts ...grpc.CallOption) (*GetNodeSpeedResponse, error) {
+	out := new(GetNodeSpeedResponse)
+	err := c.cc.Invoke(ctx, BankService_GetNodeSpeed_FullMethodName, in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // BankServiceServer is the server API for BankService service.
 // All implementations must embed UnimplementedBankServiceServer
 // for forward compatibility
 type BankServiceServer interface {
 	Ping(context.Context, *PingRequest) (*PingResponse, error)
 	AvailableNodes(context.Context, *AvailableNodesRequest) (*AvailableNodesResponse, error)
+	AddNodesResults(context.Context, *AddNodesResultsRequest) (*AddNodesResultsResponse, error)
+	GetNodeSpeed(context.Context, *GetNodeSpeedRequest) (*GetNodeSpeedResponse, error)
 	mustEmbedUnimplementedBankServiceServer()
 }
 
@@ -75,6 +99,12 @@ func (UnimplementedBankServiceServer) Ping(context.Context, *PingRequest) (*Ping
 }
 func (UnimplementedBankServiceServer) AvailableNodes(context.Context, *AvailableNodesRequest) (*AvailableNodesResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method AvailableNodes not implemented")
+}
+func (UnimplementedBankServiceServer) AddNodesResults(context.Context, *AddNodesResultsRequest) (*AddNodesResultsResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method AddNodesResults not implemented")
+}
+func (UnimplementedBankServiceServer) GetNodeSpeed(context.Context, *GetNodeSpeedRequest) (*GetNodeSpeedResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetNodeSpeed not implemented")
 }
 func (UnimplementedBankServiceServer) mustEmbedUnimplementedBankServiceServer() {}
 
@@ -125,6 +155,42 @@ func _BankService_AvailableNodes_Handler(srv interface{}, ctx context.Context, d
 	return interceptor(ctx, in, info, handler)
 }
 
+func _BankService_AddNodesResults_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(AddNodesResultsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(BankServiceServer).AddNodesResults(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: BankService_AddNodesResults_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(BankServiceServer).AddNodesResults(ctx, req.(*AddNodesResultsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _BankService_GetNodeSpeed_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetNodeSpeedRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(BankServiceServer).GetNodeSpeed(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: BankService_GetNodeSpeed_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(BankServiceServer).GetNodeSpeed(ctx, req.(*GetNodeSpeedRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // BankService_ServiceDesc is the grpc.ServiceDesc for BankService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -139,6 +205,14 @@ var BankService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "AvailableNodes",
 			Handler:    _BankService_AvailableNodes_Handler,
+		},
+		{
+			MethodName: "AddNodesResults",
+			Handler:    _BankService_AddNodesResults_Handler,
+		},
+		{
+			MethodName: "GetNodeSpeed",
+			Handler:    _BankService_GetNodeSpeed_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

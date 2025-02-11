@@ -1,0 +1,28 @@
+name: Trigger
+
+on:
+  push:
+    branches:
+      - main
+jobs:
+  deploy:
+    name: "Build image"
+    runs-on: ubuntu-latest
+    steps:
+      - name: Configure SSH
+        run: |
+          mkdir -p ~/.ssh/
+          echo "$SSH_KEY" > ~/.ssh/ansible_private_key
+          chmod 600 ~/.ssh/ansible_private_key
+          cat >>~/.ssh/config <<END
+          Host ansible
+            HostName ansible.prod.vpnchik.com
+            User root
+            IdentityFile ~/.ssh/ansible_private_key
+            StrictHostKeyChecking no
+          END
+        env:
+          SSH_KEY: ${{ secrets.ANSIBLE_PRIVATE_KEY }}
+      - name: Build
+        run:
+          ssh ansible -p 45890 'source ~/.zshrc && ansible-playbook /root/ansible/playbook/image_build/speedtest/playbook.yml -u root'

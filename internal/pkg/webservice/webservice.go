@@ -5,7 +5,6 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/tarmalonchik/speedtest/internal/pkg/config"
 	"github.com/tarmalonchik/speedtest/internal/pkg/trace"
 
 	"github.com/gorilla/mux"
@@ -13,11 +12,11 @@ import (
 )
 
 type WebService struct {
-	conf   config.BaseConfig
+	conf   Config
 	router *mux.Router
 }
 
-func NewWebService(conf config.BaseConfig, router *mux.Router) *WebService {
+func NewWebService(conf Config, router *mux.Router) *WebService {
 	return &WebService{
 		conf:   conf,
 		router: router,
@@ -26,7 +25,7 @@ func NewWebService(conf config.BaseConfig, router *mux.Router) *WebService {
 
 func (s *WebService) Run(ctx context.Context) error {
 	server := &http.Server{
-		Addr:         s.conf.GetAppAddr(),
+		Addr:         s.conf.GetHTTPAddr(),
 		Handler:      s.router,
 		WriteTimeout: time.Second * 15,
 		ReadTimeout:  time.Second * 15,
@@ -35,7 +34,7 @@ func (s *WebService) Run(ctx context.Context) error {
 
 	errC := make(chan error, 1)
 	go func() {
-		logrus.Infof("http servers listening %s", s.conf.GetAppAddr())
+		logrus.Infof("http servers listening %s", s.conf.GetHTTPAddr())
 		errC <- server.ListenAndServe()
 	}()
 
@@ -43,7 +42,7 @@ func (s *WebService) Run(ctx context.Context) error {
 	case <-ctx.Done():
 		logrus.Info("stop http server")
 
-		// nolint contextcheck here is parent context is closed. For timeout we should use context.Background()
+		// nolint contextcheck here is parent context is closed. For timeout, we should use context.Background()
 		timeout, cancel := context.WithTimeout(context.Background(), 1*time.Second)
 		defer cancel()
 

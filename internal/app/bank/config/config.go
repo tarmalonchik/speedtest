@@ -3,12 +3,14 @@ package config
 import (
 	"github.com/tarmalonchik/speedtest/internal/app/bank/svc"
 	"github.com/tarmalonchik/speedtest/internal/pkg/config"
+	"github.com/tarmalonchik/speedtest/internal/pkg/webservice"
 )
 
 // Config contains all environment variables
 type Config struct {
-	config.DefaultConfig
-	Bank svc.Config
+	Default config.DefaultConfig
+	Server  webservice.Config
+	Bank    svc.Config
 }
 
 func GetConfig(service string) (conf *Config, err error) {

@@ -5,6 +5,7 @@ import (
 
 	"github.com/tarmalonchik/speedtest/internal/app/bank/bootstrap"
 	"github.com/tarmalonchik/speedtest/internal/app/bank/config"
+	"github.com/tarmalonchik/speedtest/internal/pkg/trace"
 	"github.com/tarmalonchik/speedtest/internal/pkg/version"
 	"github.com/tarmalonchik/speedtest/internal/pkg/webservice"
 
@@ -40,14 +41,14 @@ func main() {
 		return
 	}
 
-	ws := webservice.NewWebService(conf, router)
+	ws := webservice.NewWebService(conf.Server, router)
 	grpc, err := bootstrap.GetGRPC(ctx, conf, handlers)
 	if err != nil {
-		logrus.WithError(err).Error("failed to initiate grpc")
+		logrus.WithError(trace.FuncNameWithError(err)).Error("failed to initiate grpc")
 		return
 	}
 
-	app := core.NewCore(nil, conf.GracefulTimeout, 50)
+	app := core.NewCore(nil, conf.Default.GracefulTimeout, 50)
 	app.AddRunner(ws.Run, true)
 	app.AddRunner(grpc.Run, true)
 

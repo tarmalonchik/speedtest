@@ -3,7 +3,6 @@ package iperf3client
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 	"os/exec"
 	"time"
 
@@ -21,6 +20,7 @@ type Worker struct {
 
 type bankCli interface {
 	AvailableNodes(ctx context.Context, in *sdk.AvailableNodesRequest, opts ...grpc.CallOption) (*sdk.AvailableNodesResponse, error)
+	AddNodesResults(ctx context.Context, in *sdk.AddNodesResultsRequest, opts ...grpc.CallOption) (*sdk.AddNodesResultsResponse, error)
 }
 
 func NewWorker(conf Config, bankCli bankCli) *Worker {
@@ -31,10 +31,6 @@ func NewWorker(conf Config, bankCli bankCli) *Worker {
 }
 
 func (t *Worker) Run(ctx context.Context) error {
-	if !t.conf.IsClient {
-		return nil
-	}
-
 	for {
 		select {
 		case <-ctx.Done():
@@ -42,7 +38,7 @@ func (t *Worker) Run(ctx context.Context) error {
 			return nil
 		case <-time.NewTicker(t.conf.MeasurementPeriod).C:
 			if err := t.run(ctx); err != nil {
-				logrus.WithError(err).Errorf("worker")
+				logrus.WithError(trace.FuncNameWithError(err)).Errorf("worker")
 			}
 		}
 	}
@@ -54,26 +50,83 @@ func (t *Worker) run(ctx context.Context) error {
 		return trace.FuncNameWithErrorMsg(err, "getting available nodes")
 	}
 
+	var allSpeeds []speed
+
 	for i := range allNodes.Ip {
-		if err = t.measureSingleNode(ctx, allNodes.Ip[i]); err != nil {
-			logrus.WithError(err).Errorf("measuring node %s", allNodes.Ip[i])
+		singleSpeed, err := t.measureSingleNode(ctx, allNodes.Ip[i])
+		if err != nil {
+			logrus.WithError(trace.FuncNameWithError(err)).Errorf("measuring node %s", allNodes.Ip[i])
+		} else {
+			logrus.Infof("measured success ip %s inbound %d outbound %d", allNodes.Ip[i], singleSpeed.inboundBits, singleSpeed.outboundBits)
+			allSpeeds = append(allSpeeds, singleSpeed)
 		}
+	}
+
+	currentNodeSpeed := t.getMaxSpeed(allSpeeds)
+	currentNodeSpeed.ipAddress = t.conf.MyIpAddress
+	currentNodeSpeed.createdAt = time.Now().UTC()
+	allSpeeds = append(allSpeeds, currentNodeSpeed)
+
+	bankCliRequest := &sdk.AddNodesResultsRequest{
+		Items: make([]*sdk.AddNodesResultsRequestItem, len(allSpeeds)),
+	}
+
+	for i := range allSpeeds {
+		bankCliRequest.Items[i] = &sdk.AddNodesResultsRequestItem{
+			IpAddress:     allSpeeds[i].ipAddress,
+			InboundSpeed:  allSpeeds[i].inboundBits,
+			OutboundSpeed: allSpeeds[i].outboundBits,
+			CreatedAt:     allSpeeds[i].createdAt.Unix(),
+		}
+	}
+
+	if _, err = t.bankCli.AddNodesResults(ctx, bankCliRequest); err != nil {
+		return trace.FuncNameWithErrorMsg(err, "sending results")
 	}
 	return nil
 }
 
-func (t *Worker) measureSingleNode(ctx context.Context, ip string) error {
-	data, err := exec.CommandContext(ctx, "iperf3", "-c", ip, "-p", "5201", "-t5", "--json").Output()
-	if err != nil {
-		return trace.FuncNameWithErrorMsg(err, "executing command")
+func (t *Worker) getMaxSpeed(allSpeeds []speed) speed {
+	if len(allSpeeds) == 0 {
+		return speed{}
 	}
+	index := 0
+	maxSpeed := int64(0)
 
-	var payload IperfJsonOut
+	for i := range allSpeeds {
+		sp := allSpeeds[i].outboundBits + allSpeeds[i].inboundBits
+		if sp > maxSpeed {
+			maxSpeed = sp
+			index = i
+		}
+	}
+	return allSpeeds[index]
+}
+
+func (t *Worker) measureSingleNode(ctx context.Context, ip string) (out speed, err error) {
+	var (
+		data    []byte
+		payload IperfJsonOut
+	)
+
+	for i := 0; i < int(t.conf.MeasurementRetries)+1; i++ {
+		data, err = exec.CommandContext(ctx, "iperf3", "-c", ip, "-p", t.conf.Iperf3Port, "-t5", "--json").Output()
+		if err != nil {
+			logrus.WithError(trace.FuncNameWithError(err)).Errorf("measuring node %s", ip)
+			time.Sleep(2 * time.Second)
+		} else {
+			break
+		}
+	}
 
 	if err = json.Unmarshal(data, &payload); err != nil {
-		return trace.FuncNameWithErrorMsg(err, "unmarshal")
+		return speed{}, trace.FuncNameWithErrorMsg(err, "unmarshal")
 	}
-	fmt.Println(payload.End.SumReceived.BitsPerSecond)
-	fmt.Println(payload.End.SumSent.BitsPerSecond)
-	return nil
+
+	return speed{
+		ipAddress:    ip,
+		inboundBits:  int64(payload.End.SumReceived.BitsPerSecond),
+		outboundBits: int64(payload.End.SumSent.BitsPerSecond),
+		createdAt:    time.Now().UTC(),
+	}, nil
 }

@@ -57,10 +57,55 @@ service BankService {
       }
     };
   }
+
+  rpc AddNodesResults(AddNodesResultsRequest) returns (AddNodesResultsResponse) {
+    option (google.api.http) = {
+      post: "/v1/nodes"
+      body: "*"
+    };
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+      security: {
+        security_requirement: {}
+      }
+    };
+  }
+
+  rpc GetNodeSpeed(GetNodeSpeedRequest) returns (GetNodeSpeedResponse) {
+    option (google.api.http) = {
+      get: "/v1/nodes/speed"
+    };
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+      security: {
+        security_requirement: {}
+      }
+    };
+  }
 }
 
+message GetNodeSpeedRequest {
+  string ip_address = 1 [(tagger.tags) = "validate:\"required\""];
+}
+
+message GetNodeSpeedResponse {
+  int64 inbound_speed = 2;
+  int64 outbound_speed = 3;
+}
+
+message AddNodesResultsRequest {
+  repeated AddNodesResultsRequestItem items = 1;
+}
+
+message AddNodesResultsRequestItem {
+  string ip_address = 1 [(tagger.tags) = "validate:\"required\""];
+  int64 inbound_speed = 2;
+  int64 outbound_speed = 3;
+  int64 created_at = 4;
+}
+
+message AddNodesResultsResponse {}
+
 message PingRequest {
-  string ip_address = 1  [(tagger.tags) = "validate:\"required\""];
+  string ip_address = 1 [(tagger.tags) = "validate:\"required\""];
 }
 
 message PingResponse {}

@@ -27,7 +27,7 @@ func GetRouter(ctx context.Context, conf *config.Config, services *ServiceContai
 }
 
 func GetGRPC(_ context.Context, conf *config.Config, handlers *HandlerContainer) (*grpc.Service, error) {
-	g, err := grpc.New(conf.GetGRPCAddr())
+	g, err := grpc.New(conf.Server.GetGRPCAddr())
 	if err != nil {
 		return nil, fmt.Errorf("grpc construct err %w", err)
 	}

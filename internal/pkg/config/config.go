@@ -13,24 +13,7 @@ import (
 )
 
 type DefaultConfig struct {
-	AppPort         string        `envconfig:"APP_PORT" default:"8080"`
-	GRPCPort        string        `envconfig:"GRPC_PORT" default:"8081"`
-	AppHost         string        `envconfig:"APP_HOST" default:""`
-	Environment     string        `envconfig:"ENVIRONMENT" default:""`
 	GracefulTimeout time.Duration `envconfig:"GRACEFUL_TIMEOUT" default:"40s"`
-}
-
-func (c *DefaultConfig) GetAppPort() string  { return c.AppPort }
-func (c *DefaultConfig) GetGRPCAddr() string { return fmt.Sprintf("%s:%s", c.AppHost, c.GRPCPort) }
-func (c *DefaultConfig) GetAppAddr() string  { return fmt.Sprintf("%s:%s", c.AppHost, c.AppPort) }
-
-type BaseConfig interface {
-	GetAppPort() string
-	GetAppAddr() string
-}
-
-type DomainConfig interface {
-	GetDomain() string
 }
 
 func Load(service string, conf interface{}) error {

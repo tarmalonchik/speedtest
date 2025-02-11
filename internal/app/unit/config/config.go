@@ -17,21 +17,21 @@ type Config struct {
 	Iperf3Server       iperf3server.Config
 	Iperf3Client       iperf3client.Config
 	Svc                svc.Config
-	EnableServerModeIP []string `envconfig:"CLIENT_MODE_LIST_JSON" required:"true"`
+	EnableClientModeIP []string `envconfig:"CLIENT_MODE_LIST_JSON" required:"true"`
 }
 
 func (c *Config) ParseServerModeIP() {
-	for i := range c.EnableServerModeIP {
-		if c.EnableServerModeIP[i] == c.Iperf3Client.MyIpAddress {
-			c.Iperf3Server.IsClient = false
-			c.Iperf3Client.IsClient = false
-			c.Ping.IsClient = false
+	for i := range c.EnableClientModeIP {
+		if c.EnableClientModeIP[i] == c.Iperf3Client.MyIpAddress {
+			c.Iperf3Server.IsClient = true
+			c.Iperf3Client.IsClient = true
+			c.Ping.IsClient = true
 			return
 		}
 	}
-	c.Iperf3Server.IsClient = true
-	c.Iperf3Client.IsClient = true
-	c.Ping.IsClient = true
+	c.Iperf3Server.IsClient = false
+	c.Iperf3Client.IsClient = false
+	c.Ping.IsClient = false
 }
 
 func GetConfig(service string) (conf *Config, err error) {

@@ -28,6 +28,7 @@ func NewWorker(conf Config, bankCli bankCli) *Worker {
 }
 
 func (t *Worker) Run(ctx context.Context) error {
+	t.run(ctx)
 	for {
 		select {
 		case <-ctx.Done():

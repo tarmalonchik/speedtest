@@ -27,6 +27,14 @@ func main() {
 		return
 	}
 
+	conf.ParseServerModeIP()
+
+	if conf.Iperf3Client.IsClient {
+		logrus.Infof("CLIENT MODE ON")
+	} else {
+		logrus.Infof("SERVER MODE ON")
+	}
+
 	services, err := bootstrap.GetServices(ctx, conf)
 	if err != nil {
 		logrus.Errorf("failed to initiate service locator: %v", err)

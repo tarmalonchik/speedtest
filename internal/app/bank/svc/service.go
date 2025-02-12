@@ -78,7 +78,7 @@ func (s *Service) AddNodesResults(_ context.Context, results []NodeResult) error
 				logrus.WithError(trace.FuncNameWithError(err)).Errorf("unmarshal for ip: %s", results[i].IP)
 				continue
 			}
-			if saved.CreatedAt.After(now.Add(-s.conf.MeasurementPeriod)) && saved.TotalSpeed() >= results[i].TotalSpeed() {
+			if saved.CreatedAt.After(now.Add(-2*s.conf.MeasurementPeriod)) && saved.TotalSpeed() >= results[i].TotalSpeed() {
 				continue
 			}
 		}

@@ -110,7 +110,7 @@ func (t *Worker) measureSingleNode(ctx context.Context, ip string) (out speed, e
 	)
 
 	for i := 0; i < int(t.conf.MeasurementRetries)+1; i++ {
-		data, err = exec.CommandContext(ctx, "iperf3", "-c", ip, "-p", t.conf.Iperf3Port, "-t5", "--json").Output()
+		data, err = exec.CommandContext(ctx, "iperf3", "-c", ip, "-p", t.conf.Iperf3Port, "-t3", "--json").Output()
 		if err != nil {
 			logrus.WithError(trace.FuncNameWithError(err)).Errorf("measuring node %s", ip)
 			time.Sleep(2 * time.Second)

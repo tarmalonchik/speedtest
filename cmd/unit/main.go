@@ -29,7 +29,7 @@ func main() {
 
 	conf.ParseServerModeIP()
 
-	if conf.Iperf3Client.IsClient {
+	if conf.Ping.IsClient {
 		logrus.Infof("CLIENT MODE ON")
 	} else {
 		logrus.Infof("SERVER MODE ON")
@@ -48,15 +48,15 @@ func main() {
 		return
 	}
 	ws := webservice.NewWebService(conf.Server, router)
-
 	app := core.NewCore(nil, conf.Default.GracefulTimeout, 50)
-	app.AddRunner(ws.Run, false)
-	if conf.Iperf3Client.IsClient {
-		app.AddRunner(services.GetIperf3ClientWorker().Run, true)
+
+	if conf.Ping.IsClient {
+		app.AddRunner(ws.Run, false)
 	} else {
-		app.AddRunner(services.GetPingWorker().Run, true)
 		app.AddRunner(services.GetIperf3ServerWorker().Run, true)
 	}
+	app.AddRunner(services.GetPingWorker().Run, true)
+
 	err = app.Launch(ctx)
 	if err != nil {
 		logrus.Errorf("application error: %v", err)

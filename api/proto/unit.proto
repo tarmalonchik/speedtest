@@ -1,0 +1,58 @@
+syntax = "proto3";
+package sdk;
+option go_package = "github.com/tarmalonchik/speedtest/pkg/api/sdk";
+import "tagger/tagger.proto";
+import "google/api/annotations.proto";
+import "protoc-gen-openapiv2/options/annotations.proto";
+
+option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_swagger) = {
+  base_path: "/unit/"
+  info: {
+    title: "Unit API";
+    description: "";
+  }
+  security_definitions: {
+    security: [
+      {
+        key: "bearerToken"
+        value: {
+          type: TYPE_API_KEY
+          in: IN_HEADER
+          name: "Authorization"
+          description: "Authentication token, prefixed by Bearer: Bearer <token>"
+        }
+      },
+      {
+        key: "basic"
+        value: {
+          type: TYPE_BASIC
+          description: "Basic authentication login and password"
+        }
+      }
+    ]
+  }
+  security: {}
+};
+
+service UnitService {
+  rpc Measure(MeasureRequest) returns (MeasureResponse) {
+    option (google.api.http) = {
+      post: "/v1/measure"
+      body: "*"
+    };
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+      security: {
+        security_requirement: {}
+      }
+    };
+  }
+}
+
+message MeasureRequest {
+  string iperf3_server_ip = 1 [(tagger.tags) = "validate:\"required\""];
+}
+
+message MeasureResponse {
+  int64 inbound_speed = 1;
+  int64 outbound_speed = 2;
+}

@@ -42,7 +42,9 @@ func (t *Worker) Run(ctx context.Context) error {
 
 func (t *Worker) run(ctx context.Context) {
 	_, err := t.bankCli.Ping(ctx, &sdk.PingRequest{
-		IpAddress: t.conf.MyIpAddress,
+		ExternalIpAddress: t.conf.ExternalIP,
+		InternalIpAddress: t.conf.InternalIP,
+		IsClient:          t.conf.IsClient,
 	})
 	if err != nil {
 		logrus.WithError(trace.FuncNameWithError(err)).Errorf("sending ping request")

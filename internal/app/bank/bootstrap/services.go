@@ -27,7 +27,9 @@ func GetServices(ctx context.Context, conf *config.Config) (*ServiceContainer, e
 	sv.bankSvc = svc.NewService(
 		ctx,
 		conf.Bank,
-		sv.clients.cache,
+		sv.clients.srvNode,
+		sv.clients.cliNode,
+		sv.clients.measurement,
 	)
 	return sv, nil
 }

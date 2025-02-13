@@ -4,29 +4,21 @@ import (
 	"time"
 )
 
-const (
-	availableNodesPrefix = "available-node-"
-	availableNodesTemp   = availableNodesPrefix + "%s"
-	nodeSpeedTemp        = "node-speed-%s"
-)
-
 type Config struct {
 	NodeIsAvailableTimeout time.Duration `envconfig:"NODE_IS_AVAILABLE_TIMEOUT" default:"40s"`
 	MeasurementPeriod      time.Duration `envconfig:"MEASUREMENT_PERIOD" default:"600s"`
+	UnitGRPCPort           string        `envconfig:"UNIT_GRPC_PORT" required:"true"`
+	MeasurementStepsPeriod time.Duration `envconfig:"MEASUREMENTS_STEPS_PERIOD" required:"true"`
 }
 
-type availableNode struct {
-	IP        string    `json:"ip"`
-	UpdatedAt time.Time `json:"updated_at"`
+type Node struct {
+	InternalIP string
+	ExternalIP string
+	LastUpdate time.Time
 }
 
-type NodeResult struct {
-	IP            string    `json:"ip"`
-	InboundSpeed  int64     `json:"inbound_speed"`
-	OutboundSpeed int64     `json:"outbound_speed"`
-	CreatedAt     time.Time `json:"created_at"`
-}
-
-func (n *NodeResult) TotalSpeed() int64 {
-	return n.InboundSpeed + n.OutboundSpeed
+type speed struct {
+	InboundSpeed     int64
+	OutboundSpeed    int64
+	ServerExternalIP string
 }

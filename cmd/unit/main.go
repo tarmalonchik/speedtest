@@ -26,13 +26,15 @@ func main() {
 		logrus.Errorf("failed to load environment: %v", err)
 		return
 	}
+	if err = conf.ParseBase64Info(); err != nil {
+		logrus.Errorf("failed to parse server data: %v", err)
+		return
+	}
 
-	conf.ParseServerModeIP()
-
-	if conf.Ping.IsClient {
-		logrus.Infof("CLIENT MODE ON")
-	} else {
+	if conf.Ping.CurrentServerConfig.SpeedtestIsServer {
 		logrus.Infof("SERVER MODE ON")
+	} else {
+		logrus.Infof("CLIENT MODE ON")
 	}
 
 	services, err := bootstrap.GetServices(ctx, conf)
@@ -47,13 +49,14 @@ func main() {
 		logrus.Errorf("failed to initiate routers")
 		return
 	}
+
 	ws := webservice.NewWebService(conf.Server, router)
 	app := core.NewCore(nil, conf.Default.GracefulTimeout, 50)
 
-	if conf.Ping.IsClient {
-		app.AddRunner(ws.Run, false)
-	} else {
+	if conf.Ping.CurrentServerConfig.SpeedtestIsServer {
 		app.AddRunner(services.GetIperf3ServerWorker().Run, true)
+	} else {
+		app.AddRunner(ws.Run, false)
 	}
 	app.AddRunner(services.GetPingWorker().Run, true)
 

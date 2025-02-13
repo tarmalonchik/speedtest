@@ -15,6 +15,7 @@ type Node struct {
 	InternalIP string
 	ExternalIP string
 	LastUpdate time.Time
+	Provider   string
 }
 
 type speed struct {

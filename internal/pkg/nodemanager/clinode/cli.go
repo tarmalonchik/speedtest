@@ -58,7 +58,7 @@ func (n *ClientNodeManager) AddNode(externalIP, internalIP string) {
 	n.mp[externalIP] = newNext
 }
 
-func (n *ClientNodeManager) PingNode(externalIP, internalIP string) {
+func (n *ClientNodeManager) PingNode(externalIP, internalIP, provider string) {
 	n.Lock()
 	defer n.Unlock()
 
@@ -67,6 +67,7 @@ func (n *ClientNodeManager) PingNode(externalIP, internalIP string) {
 	}
 	n.mp[externalIP].Val.LastUpdate = time.Now().UTC()
 	n.mp[externalIP].Val.InternalIP = internalIP
+	n.mp[externalIP].Val.Provider = provider
 }
 
 func (n *ClientNodeManager) GoNext() svc.Node {

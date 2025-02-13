@@ -14,13 +14,13 @@ import (
 
 type cliNodeManager interface {
 	AddNode(externalIP, internalIP string)
-	PingNode(externalIP, internalIP string)
+	PingNode(externalIP, internalIP, provider string)
 	GoNext() Node
 }
 
 type serverNodeManager interface {
 	AddNode(externalIP, internalIP string)
-	PingNode(externalIP, internalIP string)
+	PingNode(externalIP, internalIP, provider string)
 	GetNodes() []Node
 }
 
@@ -54,12 +54,12 @@ func NewService(
 	return svc
 }
 
-func (s *Service) Ping(_ context.Context, externalIP, internalIP string, isClient bool) {
+func (s *Service) Ping(_ context.Context, externalIP, internalIP string, isClient bool, provider string) {
 	if isClient {
-		s.clientNodeManager.PingNode(externalIP, internalIP)
+		s.clientNodeManager.PingNode(externalIP, internalIP, provider)
 		return
 	}
-	s.serverNodeManager.PingNode(externalIP, internalIP)
+	s.serverNodeManager.PingNode(externalIP, internalIP, provider)
 }
 
 func (s *Service) AddNode(_ context.Context, externalIP, internalIP string, isClient bool) {

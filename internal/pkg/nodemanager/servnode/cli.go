@@ -32,7 +32,7 @@ func (s *ServerNodes) AddNode(externalIP, internalIP string) {
 	}
 }
 
-func (s *ServerNodes) PingNode(externalIP, internalIP string) {
+func (s *ServerNodes) PingNode(externalIP, internalIP, provider string) {
 	s.Lock()
 	defer s.Unlock()
 
@@ -44,6 +44,7 @@ func (s *ServerNodes) PingNode(externalIP, internalIP string) {
 		ExternalIP: externalIP,
 		LastUpdate: time.Now().UTC(),
 		InternalIP: internalIP,
+		Provider:   provider,
 	}
 	s.mp[externalIP] = val
 }

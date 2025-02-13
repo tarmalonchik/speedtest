@@ -75,6 +75,7 @@ message AddNodeRequest {
   string external_ip_address = 1 [(tagger.tags) = "validate:\"required\""];
   string internal_ip_address = 2 [(tagger.tags) = "validate:\"required\""];
   bool is_client = 3;
+  string provider = 4;
 }
 
 message AddNodeResponse {}
@@ -92,6 +93,7 @@ message PingRequest {
   string external_ip_address = 1 [(tagger.tags) = "validate:\"required\""];
   string internal_ip_address = 2 [(tagger.tags) = "validate:\"required\""];
   bool is_client = 3;
+  string provider = 4;
 }
 
 message PingResponse {}

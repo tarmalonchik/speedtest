@@ -1,10 +1,16 @@
 package config
 
 import (
+	"encoding/base64"
+	"encoding/json"
+	"errors"
+	"strings"
+
 	"github.com/tarmalonchik/speedtest/internal/app/unit/svc"
 	iperf3server "github.com/tarmalonchik/speedtest/internal/app/unit/workers/iperf3-server"
 	"github.com/tarmalonchik/speedtest/internal/app/unit/workers/pinger"
 	"github.com/tarmalonchik/speedtest/internal/pkg/config"
+	"github.com/tarmalonchik/speedtest/internal/pkg/trace"
 	"github.com/tarmalonchik/speedtest/internal/pkg/webservice"
 )
 
@@ -16,17 +22,33 @@ type Config struct {
 	Iperf3Server         iperf3server.Config
 	Svc                  svc.Config
 	Base64AllServersData string `envconfig:"BASE64_ALL_SERVERS_data" required:"true"`
+	CurrentServerConfig  pinger.ServerConfig
 }
 
-func (c *Config) ParseServerModeIP() {
+func (c *Config) ParseBase64Info() error {
+	rawData, err := base64.StdEncoding.DecodeString(c.Base64AllServersData)
+	if err != nil {
+		return trace.FuncNameWithErrorMsg(err, "error while parsing")
+	}
+	stringData := string(rawData)
+	stringData = strings.ReplaceAll(stringData, "'", "\"")
+	stringData = strings.ReplaceAll(stringData, "False", "false")
+	stringData = strings.ReplaceAll(stringData, "True", "true")
 
-	for i := range c.EnableServerModeIP {
-		if c.EnableServerModeIP[i] == c.Svc.ExternalIP {
-			c.Ping.IsClient = false
-			return
+	var servers []pinger.ServerConfig
+
+	if err = json.Unmarshal([]byte(stringData), &servers); err != nil {
+		return trace.FuncNameWithErrorMsg(err, "unmarshal")
+	}
+
+	for i := range servers {
+		if c.Ping.ExternalIP == servers[i].IpAddress {
+			c.CurrentServerConfig = servers[i]
+			c.Ping.CurrentServerConfig = servers[i]
+			return nil
 		}
 	}
-	c.Ping.IsClient = true
+	return trace.FuncNameWithError(errors.New("server not found"))
 }
 
 func GetConfig(service string) (conf *Config, err error) {

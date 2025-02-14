@@ -36,7 +36,7 @@ func (m *Measurement) GetData(externalIP string, period time.Duration) (inbound,
 	m.Lock()
 	defer m.Unlock()
 	resp := m.mp[externalIP]
-	if resp.CreatedAt.UTC().Before(time.Now().UTC().Add(-period)) {
+	if resp.CreatedAt.UTC().Before(time.Now().UTC().Add(-3 * period)) {
 		return 0, 0
 	}
 	return resp.InboundSpeed, resp.OutboundSpeed

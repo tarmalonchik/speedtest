@@ -1,11 +1,5 @@
 package svc
 
-import (
-	"fmt"
-)
-
-var ErrMeasuringSpeed = fmt.Errorf("measuring error")
-
 type Config struct {
 	BankHost               string `envconfig:"BANK_HOST" required:"true"`
 	BankPort               string `envconfig:"BANK_PORT" required:"true"`

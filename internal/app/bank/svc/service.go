@@ -107,8 +107,10 @@ func (s *Service) run(ctx context.Context) error {
 			Iperf3ServerIp: serverNodes[i].ExternalIP,
 		})
 		if err != nil {
-			logrus.WithError(trace.FuncNameWithError(err)).Errorf("measuring node")
+			logrus.WithError(trace.FuncNameWithError(err)).Errorf("measuring from client:%s to server:%s ", unit.ExternalIP, serverNodes[i].ExternalIP)
 			continue
+		} else {
+			logrus.Infof("success measuring from client:%s to server:%s ", unit.ExternalIP, serverNodes[i].ExternalIP)
 		}
 
 		speeds = append(speeds, speed{

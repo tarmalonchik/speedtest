@@ -51,6 +51,7 @@ func main() {
 	app := core.NewCore(nil, conf.Default.GracefulTimeout, 50)
 	app.AddRunner(ws.Run, true)
 	app.AddRunner(grpc.Run, true)
+	app.AddRunner(services.GetMeasurementWorker().Run, true)
 
 	err = app.Launch(ctx)
 	if err != nil {

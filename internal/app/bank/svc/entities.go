@@ -6,9 +6,11 @@ import (
 
 type Config struct {
 	NodeIsAvailableTimeout time.Duration `envconfig:"NODE_IS_AVAILABLE_TIMEOUT" default:"40s"`
-	MeasurementPeriod      time.Duration `envconfig:"MEASUREMENT_PERIOD" default:"600s"`
 	UnitGRPCPort           string        `envconfig:"UNIT_GRPC_PORT" required:"true"`
 	MeasurementStepsPeriod time.Duration `envconfig:"MEASUREMENTS_STEPS_PERIOD" required:"true"`
+	EnableInProviderBan    bool          `envconfig:"ENABLE_IN_PROVIDER_BAN" required:"true"`
+	PingPeriod             time.Duration `envconfig:"PING_PERIOD" default:"20s"`
+	Iperf3MeasurementCount int           `envconfig:"IPERF3_MEASUREMENT_COUNT" required:"true"`
 }
 
 type Node struct {

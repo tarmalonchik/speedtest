@@ -1,6 +1,7 @@
 package servnode
 
 import (
+	"database/sql"
 	"sync"
 	"time"
 
@@ -18,28 +19,23 @@ func NewServerNodes() *ServerNodes {
 	}
 }
 
-func (s *ServerNodes) AddNode(externalIP, internalIP string) {
+func (s *ServerNodes) PingNode(externalIP, internalIP, provider string) {
 	s.Lock()
 	defer s.Unlock()
 
 	if _, ok := s.mp[externalIP]; ok {
+		s.pingNode(externalIP, internalIP, provider)
 		return
 	}
 	s.mp[externalIP] = svc.Node{
 		ExternalIP: externalIP,
 		LastUpdate: time.Now().UTC(),
 		InternalIP: internalIP,
+		Provider:   provider,
 	}
 }
 
-func (s *ServerNodes) PingNode(externalIP, internalIP, provider string) {
-	s.Lock()
-	defer s.Unlock()
-
-	if _, ok := s.mp[externalIP]; !ok {
-		return
-	}
-
+func (s *ServerNodes) pingNode(externalIP, internalIP, provider string) {
 	val := svc.Node{
 		ExternalIP: externalIP,
 		LastUpdate: time.Now().UTC(),
@@ -49,13 +45,18 @@ func (s *ServerNodes) PingNode(externalIP, internalIP, provider string) {
 	s.mp[externalIP] = val
 }
 
-func (s *ServerNodes) GetNodes() []svc.Node {
+func (s *ServerNodes) GetNodes(excludedProvider sql.NullString, pingPeriod time.Duration) []svc.Node {
 	s.Lock()
 	defer s.Unlock()
 
 	out := make([]svc.Node, 0, len(s.mp))
 	for _, val := range s.mp {
-		//if val.LastUpdate.Before() // todo skip old ones based on ping time
+		if excludedProvider.Valid && excludedProvider.String == val.Provider {
+			continue
+		}
+		if val.LastUpdate.UTC().Before(time.Now().UTC().Add(-3 * pingPeriod)) {
+			continue
+		}
 		out = append(out, val)
 	}
 	return out

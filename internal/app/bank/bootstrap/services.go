@@ -33,3 +33,7 @@ func GetServices(ctx context.Context, conf *config.Config) (*ServiceContainer, e
 	)
 	return sv, nil
 }
+
+func (s *ServiceContainer) GetMeasurementWorker() *svc.Service {
+	return s.bankSvc
+}

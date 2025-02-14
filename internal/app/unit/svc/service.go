@@ -3,6 +3,7 @@ package svc
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"os/exec"
 
 	"google.golang.org/grpc"
@@ -49,7 +50,16 @@ func (s *Service) MeasureSpeed(ctx context.Context, iperf3Server string) (inboun
 		payload IperfJsonOut
 	)
 
-	if data, err = exec.CommandContext(ctx, "iperf3", "-c", iperf3Server, "-p", s.conf.Iperf3Port, "-t3", "--json").Output(); err != nil {
+	if data, err = exec.CommandContext(
+		ctx,
+		"iperf3",
+		"-c",
+		iperf3Server,
+		"-p",
+		s.conf.Iperf3Port,
+		fmt.Sprintf("-t%d", s.conf.Iperf3MeasurementCount),
+		"--json",
+	).Output(); err != nil {
 		return 0, 0, ErrMeasuringSpeed
 	}
 

@@ -24,12 +24,19 @@ func NewClientNodeManager() *ClientNodeManager {
 	}
 }
 
-func (n *ClientNodeManager) AddNode(externalIP, internalIP string) {
+func (n *ClientNodeManager) GetClientsCount() (count int) {
+	n.Lock()
+	defer n.Unlock()
+	return len(n.mp)
+}
+
+func (n *ClientNodeManager) PingNode(externalIP, internalIP, provider string) {
 	n.Lock()
 	defer n.Unlock()
 
 	_, ok := n.mp[externalIP]
 	if ok {
+		n.pingNode(externalIP, internalIP, provider)
 		return
 	}
 
@@ -39,6 +46,7 @@ func (n *ClientNodeManager) AddNode(externalIP, internalIP string) {
 				ExternalIP: externalIP,
 				InternalIP: internalIP,
 				LastUpdate: time.Now().UTC(),
+				Provider:   provider,
 			},
 		}
 		n.current.Next = n.current
@@ -51,6 +59,7 @@ func (n *ClientNodeManager) AddNode(externalIP, internalIP string) {
 			ExternalIP: externalIP,
 			InternalIP: internalIP,
 			LastUpdate: time.Now().UTC(),
+			Provider:   provider,
 		},
 		Next: oldNext,
 	}
@@ -58,23 +67,21 @@ func (n *ClientNodeManager) AddNode(externalIP, internalIP string) {
 	n.mp[externalIP] = newNext
 }
 
-func (n *ClientNodeManager) PingNode(externalIP, internalIP, provider string) {
-	n.Lock()
-	defer n.Unlock()
-
-	if _, ok := n.mp[externalIP]; !ok {
-		return
-	}
+func (n *ClientNodeManager) pingNode(externalIP, internalIP, provider string) {
 	n.mp[externalIP].Val.LastUpdate = time.Now().UTC()
 	n.mp[externalIP].Val.InternalIP = internalIP
 	n.mp[externalIP].Val.Provider = provider
 }
 
-func (n *ClientNodeManager) GoNext() svc.Node {
+func (n *ClientNodeManager) GoNext(pingPeriod time.Duration) (svc.Node, bool) {
 	n.Lock()
 	defer n.Unlock()
 
+	if n.current == nil {
+		return svc.Node{}, false
+	}
+
 	out := n.current
 	n.current = n.current.Next
-	return out.Val
+	return out.Val, out.Val.LastUpdate.After(time.Now().UTC().Add(-pingPeriod * 3))
 }

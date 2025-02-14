@@ -47,18 +47,6 @@ service BankService {
     };
   }
 
-  rpc AddNode(AddNodeRequest) returns (AddNodeResponse) {
-    option (google.api.http) = {
-      post: "/v1/node"
-      body: "*"
-    };
-    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
-      security: {
-        security_requirement: {}
-      }
-    };
-  }
-
   rpc GetNodeSpeed(GetNodeSpeedRequest) returns (GetNodeSpeedResponse) {
     option (google.api.http) = {
       get: "/v1/nodes/speed"

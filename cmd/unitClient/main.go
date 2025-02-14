@@ -15,7 +15,7 @@ import (
 
 func init() {
 	if version.Service == "" {
-		version.Service = "unit"
+		version.Service = "unitCli"
 	}
 }
 

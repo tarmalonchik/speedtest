@@ -5,8 +5,8 @@ import (
 )
 
 type Config struct {
-	HTTPPort string `envconfig:"HTTP_PORT" default:"8080"`
-	GRPCPort string `envconfig:"GRPC_PORT" default:"8081"`
+	HTTPPort string `envconfig:"HTTP_PORT" required:"true"`
+	GRPCPort string `envconfig:"GRPC_PORT" required:"true"`
 	Host     string `envconfig:"HOST" default:""`
 }
 

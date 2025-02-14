@@ -2,6 +2,7 @@ package svc
 
 import (
 	"context"
+	"database/sql"
 	"fmt"
 	"time"
 
@@ -13,20 +14,19 @@ import (
 )
 
 type cliNodeManager interface {
-	AddNode(externalIP, internalIP string)
 	PingNode(externalIP, internalIP, provider string)
-	GoNext() Node
+	GoNext(pingPeriod time.Duration) (Node, bool)
+	GetClientsCount() (count int)
 }
 
 type serverNodeManager interface {
-	AddNode(externalIP, internalIP string)
 	PingNode(externalIP, internalIP, provider string)
-	GetNodes() []Node
+	GetNodes(excludedProvider sql.NullString, pingPeriod time.Duration) []Node
 }
 
 type measurementManager interface {
 	AddData(externalIP string, inbound, outbound int64)
-	GetData(externalIP string) (inbound, outbound int64)
+	GetData(externalIP string, measurementPeriod time.Duration) (inbound, outbound int64)
 }
 
 type Service struct {
@@ -62,16 +62,9 @@ func (s *Service) Ping(_ context.Context, externalIP, internalIP string, isClien
 	s.serverNodeManager.PingNode(externalIP, internalIP, provider)
 }
 
-func (s *Service) AddNode(_ context.Context, externalIP, internalIP string, isClient bool) {
-	if isClient {
-		s.clientNodeManager.AddNode(externalIP, internalIP)
-		return
-	}
-	s.serverNodeManager.AddNode(externalIP, internalIP)
-}
-
 func (s *Service) GetNodeSpeed(_ context.Context, externalIP string) (inbound, outbound int64) {
-	return s.measurementManager.GetData(externalIP)
+	period := s.conf.MeasurementStepsPeriod * time.Duration(s.clientNodeManager.GetClientsCount())
+	return s.measurementManager.GetData(externalIP, period)
 }
 
 func (s *Service) Run(ctx context.Context) error {
@@ -89,7 +82,11 @@ func (s *Service) Run(ctx context.Context) error {
 }
 
 func (s *Service) run(ctx context.Context) error {
-	unit := s.clientNodeManager.GoNext()
+	fmt.Println("here")
+	unit, ok := s.clientNodeManager.GoNext(s.conf.PingPeriod)
+	if !ok {
+		return nil
+	}
 
 	unitClient, err := client.NewUnitClient(fmt.Sprintf("%s:%s", unit.InternalIP, s.conf.UnitGRPCPort))
 	if err != nil {
@@ -99,7 +96,10 @@ func (s *Service) run(ctx context.Context) error {
 		_ = unitClient.CloseConnection()
 	}()
 
-	serverNodes := s.serverNodeManager.GetNodes()
+	serverNodes := s.serverNodeManager.GetNodes(sql.NullString{String: unit.Provider, Valid: s.conf.EnableInProviderBan}, s.conf.PingPeriod)
+	if len(serverNodes) == 0 {
+		return nil
+	}
 
 	var speeds = make([]speed, 0, len(serverNodes))
 

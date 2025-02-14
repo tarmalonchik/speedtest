@@ -2,7 +2,6 @@ package svc
 
 import (
 	"context"
-	"database/sql"
 	"fmt"
 	"time"
 
@@ -14,14 +13,14 @@ import (
 )
 
 type cliNodeManager interface {
-	PingNode(externalIP, internalIP, provider string)
-	GoNext(pingPeriod time.Duration) (Node, bool)
+	PingNode(externalIP, internalIP, provider string, nowTime time.Time)
+	GetNodes(pingPeriod time.Duration) (out []Node)
 	GetClientsCount() (count int)
 }
 
 type serverNodeManager interface {
 	PingNode(externalIP, internalIP, provider string)
-	GetNodes(excludedProvider sql.NullString, pingPeriod time.Duration) []Node
+	GetNodes(pingPeriod time.Duration) []Node
 }
 
 type measurementManager interface {
@@ -56,15 +55,14 @@ func NewService(
 
 func (s *Service) Ping(_ context.Context, externalIP, internalIP string, isClient bool, provider string) {
 	if isClient {
-		s.clientNodeManager.PingNode(externalIP, internalIP, provider)
+		s.clientNodeManager.PingNode(externalIP, internalIP, provider, time.Now().UTC())
 		return
 	}
 	s.serverNodeManager.PingNode(externalIP, internalIP, provider)
 }
 
 func (s *Service) GetNodeSpeed(_ context.Context, externalIP string) (inbound, outbound int64) {
-	period := s.conf.MeasurementStepsPeriod * time.Duration(s.clientNodeManager.GetClientsCount())
-	return s.measurementManager.GetData(externalIP, period)
+	return s.measurementManager.GetData(externalIP, s.conf.MeasurementPeriod)
 }
 
 func (s *Service) Run(ctx context.Context) error {
@@ -73,7 +71,7 @@ func (s *Service) Run(ctx context.Context) error {
 		case <-ctx.Done():
 			logrus.Infof("%s stopped successfull", trace.FuncName())
 			return nil
-		case <-time.NewTicker(s.conf.MeasurementStepsPeriod).C:
+		case <-time.NewTicker(s.conf.MeasurementPeriod).C:
 			if err := s.run(ctx); err != nil {
 				logrus.WithError(trace.FuncNameWithError(err)).Errorf("runnng")
 			}
@@ -82,59 +80,99 @@ func (s *Service) Run(ctx context.Context) error {
 }
 
 func (s *Service) run(ctx context.Context) error {
-	unit, ok := s.clientNodeManager.GoNext(s.conf.PingPeriod)
-	if !ok {
-		return nil
+	units := s.clientNodeManager.GetNodes(s.conf.PingPeriod)
+	servers := s.serverNodeManager.GetNodes(s.conf.PingPeriod)
+
+	mpServersSpeed := make(map[string]speed)
+	mpUnitsSpeed := make(map[string]speed)
+
+	for i := range units {
+		for j := range servers {
+			if s.conf.EnableInProviderBan {
+				if units[i].Provider == servers[j].Provider {
+					continue
+				}
+			}
+
+			measuredSpeed, err := s.measureSingleNode(ctx, units[i].InternalIP, servers[j].ExternalIP)
+			if err != nil {
+				logrus.WithError(trace.FuncNameWithError(err)).Errorf("measuring from client:%s to server:%s ",
+					units[i].ExternalIP, servers[j].ExternalIP)
+				continue
+			} else {
+				logrus.Infof("success measuring from client:%s to server:%s inbound: %d outbound: %d",
+					units[i].ExternalIP, servers[j].ExternalIP, measuredSpeed.InboundSpeed, measuredSpeed.OutboundSpeed)
+				if val, ok := mpServersSpeed[servers[j].ExternalIP]; ok {
+					if val.GetSum() < measuredSpeed.GetSum() {
+						mpServersSpeed[servers[j].ExternalIP] = speed{
+							InboundSpeed:  measuredSpeed.InboundSpeed,
+							OutboundSpeed: measuredSpeed.OutboundSpeed,
+						}
+					}
+				} else {
+					mpServersSpeed[servers[j].ExternalIP] = speed{
+						InboundSpeed:  measuredSpeed.InboundSpeed,
+						OutboundSpeed: measuredSpeed.OutboundSpeed,
+					}
+				}
+
+				if val, ok := mpUnitsSpeed[units[i].ExternalIP]; ok {
+					if val.GetSum() < measuredSpeed.GetSum() {
+						mpUnitsSpeed[units[i].ExternalIP] = speed{
+							InboundSpeed:  measuredSpeed.InboundSpeed,
+							OutboundSpeed: measuredSpeed.OutboundSpeed,
+						}
+					}
+				} else {
+					mpUnitsSpeed[units[i].ExternalIP] = speed{
+						InboundSpeed:  measuredSpeed.InboundSpeed,
+						OutboundSpeed: measuredSpeed.OutboundSpeed,
+					}
+				}
+			}
+		}
 	}
 
-	unitClient, err := client.NewUnitClient(fmt.Sprintf("%s:%s", unit.InternalIP, s.conf.UnitGRPCPort))
+	for key, val := range mpServersSpeed {
+		s.measurementManager.AddData(key, val.InboundSpeed, val.OutboundSpeed)
+	}
+	for key, val := range mpUnitsSpeed {
+		s.measurementManager.AddData(key, val.InboundSpeed, val.OutboundSpeed)
+	}
+	return nil
+}
+
+func (s *Service) measureSingleNode(ctx context.Context, fromNodeIP, toNodeExternalIP string) (speed, error) {
+	unitClient, err := client.NewUnitClient(fmt.Sprintf("%s:%s", fromNodeIP, s.conf.UnitGRPCPort))
 	if err != nil {
-		return trace.FuncNameWithErrorMsg(err, "create unit client")
+		return speed{}, trace.FuncNameWithErrorMsg(err, "create unit client")
 	}
 	defer func() {
 		_ = unitClient.CloseConnection()
 	}()
 
-	serverNodes := s.serverNodeManager.GetNodes(sql.NullString{String: unit.Provider, Valid: s.conf.EnableInProviderBan}, s.conf.PingPeriod)
-	if len(serverNodes) == 0 {
-		return nil
-	}
-
-	var speeds = make([]speed, 0, len(serverNodes))
-
-	for i := range serverNodes {
-		var measureResp = &sdk.MeasureResponse{}
-
-		for i := 0; i < 3; i++ {
-			measureResp, err = unitClient.Measure(ctx, &sdk.MeasureRequest{
-				Iperf3ServerIp: serverNodes[i].ExternalIP,
-			})
-			if err == nil {
-				logrus.Infof("success measuring from client:%s to server:%s inbound: %d outbound: %d",
-					unit.ExternalIP, serverNodes[i].ExternalIP, measureResp.InboundSpeed, measureResp.OutboundSpeed)
-				break
-			}
-		}
-		if err != nil {
-			logrus.WithError(trace.FuncNameWithError(err)).Errorf("measuring from client:%s to server:%s ", unit.ExternalIP, serverNodes[i].ExternalIP)
-			continue
-		}
-
-		speeds = append(speeds, speed{
-			InboundSpeed:     measureResp.InboundSpeed,
-			OutboundSpeed:    measureResp.OutboundSpeed,
-			ServerExternalIP: serverNodes[i].ExternalIP,
+	var measureResp = &sdk.MeasureResponse{}
+	for i := 0; i < 3; i++ {
+		measureResp, err = unitClient.Measure(ctx, &sdk.MeasureRequest{
+			Iperf3ServerIp: toNodeExternalIP,
 		})
+		if err == nil {
+			//logrus.Infof("success measuring from client:%s to server:%s inbound: %d outbound: %d",
+			//	fromExternalIP, toNodeExternalIP, measureResp.InboundSpeed, measureResp.OutboundSpeed)
+			break
+		}
+	}
+	if err == nil {
+		return speed{}, trace.FuncNameWithErrorMsg(err, "measuring error")
+	}
+	if measureResp == nil {
+		return speed{}, trace.FuncNameWithErrorMsg(err, "invalid response")
 	}
 
-	if len(speeds) == 0 {
-		return nil
-	}
-
-	maxSpeed := getMaxSpeed(speeds)
-	s.measurementManager.AddData(unit.ExternalIP, maxSpeed.InboundSpeed, maxSpeed.OutboundSpeed)
-	s.measurementManager.AddData(maxSpeed.ServerExternalIP, maxSpeed.InboundSpeed, maxSpeed.OutboundSpeed)
-	return nil
+	return speed{
+		InboundSpeed:  measureResp.InboundSpeed,
+		OutboundSpeed: measureResp.OutboundSpeed,
+	}, nil
 }
 
 func getMaxSpeed(allSpeeds []speed) speed {

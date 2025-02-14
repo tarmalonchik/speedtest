@@ -1,7 +1,6 @@
 package servnode
 
 import (
-	"database/sql"
 	"sync"
 	"time"
 
@@ -45,15 +44,12 @@ func (s *ServerNodes) pingNode(externalIP, internalIP, provider string) {
 	s.mp[externalIP] = val
 }
 
-func (s *ServerNodes) GetNodes(excludedProvider sql.NullString, pingPeriod time.Duration) []svc.Node {
+func (s *ServerNodes) GetNodes(pingPeriod time.Duration) []svc.Node {
 	s.Lock()
 	defer s.Unlock()
 
 	out := make([]svc.Node, 0, len(s.mp))
 	for _, val := range s.mp {
-		if excludedProvider.Valid && excludedProvider.String == val.Provider {
-			continue
-		}
 		if val.LastUpdate.UTC().Before(time.Now().UTC().Add(-3 * pingPeriod)) {
 			continue
 		}

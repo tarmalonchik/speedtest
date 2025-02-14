@@ -60,7 +60,7 @@ func (s *Service) MeasureSpeed(ctx context.Context, iperf3Server string) (inboun
 		fmt.Sprintf("-t%d", s.conf.Iperf3MeasurementCount),
 		"--json",
 	).Output(); err != nil {
-		return 0, 0, ErrMeasuringSpeed
+		return 0, 0, trace.FuncNameWithErrorMsg(err, "measuring error")
 	}
 
 	if err = json.Unmarshal(data, &payload); err != nil {

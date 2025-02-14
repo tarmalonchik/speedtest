@@ -82,7 +82,6 @@ func (s *Service) Run(ctx context.Context) error {
 }
 
 func (s *Service) run(ctx context.Context) error {
-	fmt.Println("here")
 	unit, ok := s.clientNodeManager.GoNext(s.conf.PingPeriod)
 	if !ok {
 		return nil

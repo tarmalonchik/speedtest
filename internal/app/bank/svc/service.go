@@ -103,15 +103,21 @@ func (s *Service) run(ctx context.Context) error {
 	var speeds = make([]speed, 0, len(serverNodes))
 
 	for i := range serverNodes {
-		measureResp, err := unitClient.Measure(ctx, &sdk.MeasureRequest{
-			Iperf3ServerIp: serverNodes[i].ExternalIP,
-		})
+		var measureResp = &sdk.MeasureResponse{}
+
+		for i := 0; i < 3; i++ {
+			measureResp, err = unitClient.Measure(ctx, &sdk.MeasureRequest{
+				Iperf3ServerIp: serverNodes[i].ExternalIP,
+			})
+			if err == nil {
+				logrus.Infof("success measuring from client:%s to server:%s inbound: %d outbound: %d",
+					unit.ExternalIP, serverNodes[i].ExternalIP, measureResp.InboundSpeed, measureResp.OutboundSpeed)
+				break
+			}
+		}
 		if err != nil {
 			logrus.WithError(trace.FuncNameWithError(err)).Errorf("measuring from client:%s to server:%s ", unit.ExternalIP, serverNodes[i].ExternalIP)
 			continue
-		} else {
-			logrus.Infof("success measuring from client:%s to server:%s inbound: %d outbound: %d",
-				unit.ExternalIP, serverNodes[i].ExternalIP, measureResp.InboundSpeed, measureResp.OutboundSpeed)
 		}
 
 		speeds = append(speeds, speed{

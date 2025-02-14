@@ -157,12 +157,10 @@ func (s *Service) measureSingleNode(ctx context.Context, fromNodeIP, toNodeExter
 			Iperf3ServerIp: toNodeExternalIP,
 		})
 		if err == nil {
-			//logrus.Infof("success measuring from client:%s to server:%s inbound: %d outbound: %d",
-			//	fromExternalIP, toNodeExternalIP, measureResp.InboundSpeed, measureResp.OutboundSpeed)
 			break
 		}
 	}
-	if err == nil {
+	if err != nil {
 		return speed{}, trace.FuncNameWithErrorMsg(err, "measuring error")
 	}
 	if measureResp == nil {

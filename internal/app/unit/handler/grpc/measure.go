@@ -16,7 +16,7 @@ func (s *UnitSvc) Measure(ctx context.Context, req *sdk.MeasureRequest) (*sdk.Me
 	if err := validator.New().Struct(req); err != nil {
 		return &sdk.MeasureResponse{}, status.Error(codes.InvalidArgument, err.Error())
 	}
-	inbound, outbound, err := s.svc.MeasureSpeed(ctx, req.Iperf3ServerIp)
+	inbound, outbound, err := s.svc.MeasureSpeed(ctx, req.GetIperf3ServerIp())
 	if err != nil {
 		logrus.WithError(trace.FuncNameWithError(err)).Errorf("service error")
 		return &sdk.MeasureResponse{}, status.Error(codes.Internal, "service error")

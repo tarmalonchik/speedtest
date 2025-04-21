@@ -41,13 +41,15 @@ func (s *Service) GetNodeSpeed(ctx context.Context) (outbound, inbound int64, er
 	if err != nil {
 		return 0, 0, trace.FuncNameWithErrorMsg(err, "getting node speed")
 	}
-	return resp.OutboundSpeed, resp.InboundSpeed, nil
+	return resp.GetOutboundSpeed(), resp.GetInboundSpeed(), nil
 }
 
+// MeasureSpeed ...
+// nolint
 func (s *Service) MeasureSpeed(ctx context.Context, iperf3Server string) (inbound, outbound int64, err error) {
 	var (
 		data    []byte
-		payload IperfJsonOut
+		payload IperfJSONOut
 	)
 
 	if data, err = exec.CommandContext(

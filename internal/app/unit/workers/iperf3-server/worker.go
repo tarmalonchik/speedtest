@@ -33,6 +33,7 @@ func (t *Worker) Run(ctx context.Context) error {
 	}
 }
 
+// nolint
 func (t *Worker) run(ctx context.Context) error {
 	cmd := exec.CommandContext(ctx, "iperf3", "-s", "-p", t.conf.Iperf3Port)
 	if err := cmd.Run(); err != nil {

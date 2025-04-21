@@ -28,12 +28,7 @@ func main() {
 		return
 	}
 
-	services, err := bootstrap.GetServices(ctx, conf)
-	if err != nil {
-		logrus.Errorf("failed to initiate service locator: %v", err)
-		return
-	}
-
+	services := bootstrap.GetServices(ctx, conf)
 	handlers := bootstrap.GetHandlers(services)
 	router, err := bootstrap.GetRouter(ctx, conf, services, handlers)
 	if err != nil {

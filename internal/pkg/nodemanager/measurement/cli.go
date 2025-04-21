@@ -1,14 +1,15 @@
 package measurement
 
 import (
+	"encoding/json"
 	"sync"
 	"time"
 )
 
 type speed struct {
-	InboundSpeed  int64
-	OutboundSpeed int64
-	CreatedAt     time.Time
+	InboundSpeed  int64     `json:"inboundSpeed"`
+	OutboundSpeed int64     `json:"outboundSpeed"`
+	CreatedAt     time.Time `json:"createdAt"`
 }
 
 type Measurement struct {
@@ -40,4 +41,14 @@ func (m *Measurement) GetData(externalIP string, period time.Duration) (inbound,
 		return 0, 0
 	}
 	return resp.InboundSpeed, resp.OutboundSpeed
+}
+
+func (m *Measurement) GetAllData() string {
+	m.Lock()
+	defer m.Unlock()
+	out, err := json.Marshal(m.mp)
+	if err != nil {
+		return ""
+	}
+	return string(out)
 }

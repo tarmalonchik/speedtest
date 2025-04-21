@@ -5,7 +5,6 @@ import (
 
 	"github.com/tarmalonchik/speedtest/internal/app/bank/config"
 	"github.com/tarmalonchik/speedtest/internal/app/bank/svc"
-	"github.com/tarmalonchik/speedtest/internal/pkg/trace"
 )
 
 type ServiceContainer struct {
@@ -14,15 +13,12 @@ type ServiceContainer struct {
 	bankSvc *svc.Service
 }
 
-func GetServices(ctx context.Context, conf *config.Config) (*ServiceContainer, error) {
+func GetServices(ctx context.Context, conf *config.Config) *ServiceContainer {
 	var (
-		err error
-		sv  = &ServiceContainer{conf: conf}
+		sv = &ServiceContainer{conf: conf}
 	)
 
-	if sv.clients, err = getClients(ctx, conf); err != nil {
-		return nil, trace.FuncNameWithErrorMsg(err, "getting clients")
-	}
+	sv.clients = getClients(ctx, conf)
 
 	sv.bankSvc = svc.NewService(
 		ctx,
@@ -31,7 +27,7 @@ func GetServices(ctx context.Context, conf *config.Config) (*ServiceContainer, e
 		sv.clients.cliNode,
 		sv.clients.measurement,
 	)
-	return sv, nil
+	return sv
 }
 
 func (s *ServiceContainer) GetMeasurementWorker() *svc.Service {

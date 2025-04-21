@@ -14,6 +14,6 @@ func (s *BankSvc) Ping(ctx context.Context, req *sdk.PingRequest) (*sdk.PingResp
 	if err := validator.New().Struct(req); err != nil {
 		return &sdk.PingResponse{}, status.Error(codes.InvalidArgument, err.Error())
 	}
-	s.svc.Ping(ctx, req.ExternalIpAddress, req.InternalIpAddress, req.IsClient, req.Provider)
+	s.svc.Ping(ctx, req.GetExternalIpAddress(), req.GetInternalIpAddress(), req.GetIsClient(), req.GetProvider())
 	return &sdk.PingResponse{}, nil
 }

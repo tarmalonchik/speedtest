@@ -42,7 +42,7 @@ func (c *Config) ParseBase64Info() error {
 	}
 
 	for i := range servers {
-		if c.Ping.ExternalIP == servers[i].IpAddress {
+		if c.Ping.ExternalIP == servers[i].IPAddress {
 			c.CurrentServerConfig = servers[i]
 			c.Ping.CurrentServerConfig = servers[i]
 			return nil

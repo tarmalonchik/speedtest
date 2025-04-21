@@ -9,7 +9,7 @@ type Config struct {
 	Iperf3MeasurementCount int    `envconfig:"IPERF3_MEASUREMENT_COUNT" required:"true"`
 }
 
-type IperfJsonOut struct {
+type IperfJSONOut struct {
 	End End `json:"end"`
 }
 

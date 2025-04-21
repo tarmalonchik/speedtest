@@ -16,10 +16,10 @@ type ClientsContainer struct {
 	measurement *measurement.Measurement
 }
 
-func getClients(_ context.Context, _ *config.Config) (*ClientsContainer, error) {
+func getClients(_ context.Context, _ *config.Config) *ClientsContainer {
 	clients := &ClientsContainer{}
 	clients.cliNode = clinode.NewClientNodeManager()
 	clients.srvNode = servnode.NewServerNodes()
 	clients.measurement = measurement.NewMeasurement()
-	return clients, nil
+	return clients
 }

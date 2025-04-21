@@ -19,9 +19,9 @@ type ServerConfig struct {
 	EnableSender      string `json:"enable_sender"`
 	LowPriority       string `json:"low_priority"`
 	Alpha3Code        string `json:"alpha_3_code"`
-	EnableIpTracker   string `json:"enable_ip_tracker"`
+	EnableIPTracker   string `json:"enable_ip_tracker"`
 	IsInfrastructure  bool   `json:"is_infrastructure"`
-	IpAddress         string `json:"ip_address"`
+	IPAddress         string `json:"ip_address"`
 	SpeedtestIsServer bool   `json:"speedtest_is_server"`
 	Provider          string `json:"provider"`
 }

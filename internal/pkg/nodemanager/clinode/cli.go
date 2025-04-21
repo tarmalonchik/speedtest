@@ -50,7 +50,7 @@ func (n *ClientNodeManager) GetNodes(pingPeriod time.Duration) (out []svc.Node) 
 		if n.nodes[i].LastUpdate.Before(time.Now().UTC().Add(-pingPeriod * 3)) {
 			continue
 		}
-		out = append(n.nodes, n.nodes[i])
+		out = append(out, n.nodes[i])
 	}
 	return out
 }

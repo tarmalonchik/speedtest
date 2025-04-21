@@ -26,6 +26,7 @@ type serverNodeManager interface {
 type measurementManager interface {
 	AddData(externalIP string, inbound, outbound int64)
 	GetData(externalIP string, measurementPeriod time.Duration) (inbound, outbound int64)
+	GetAllData() string
 }
 
 type Service struct {
@@ -72,14 +73,12 @@ func (s *Service) Run(ctx context.Context) error {
 			logrus.Infof("%s stopped successfull", trace.FuncName())
 			return nil
 		case <-time.NewTicker(s.conf.MeasurementPeriod).C:
-			if err := s.run(ctx); err != nil {
-				logrus.WithError(trace.FuncNameWithError(err)).Errorf("runnng")
-			}
+			s.run(ctx)
 		}
 	}
 }
 
-func (s *Service) run(ctx context.Context) error {
+func (s *Service) run(ctx context.Context) {
 	units := s.clientNodeManager.GetNodes(s.conf.PingPeriod)
 	servers := s.serverNodeManager.GetNodes(s.conf.PingPeriod)
 
@@ -99,35 +98,34 @@ func (s *Service) run(ctx context.Context) error {
 				logrus.WithError(trace.FuncNameWithError(err)).Errorf("measuring from client:%s to server:%s ",
 					units[i].ExternalIP, servers[j].ExternalIP)
 				continue
-			} else {
-				logrus.Infof("success measuring from client:%s to server:%s inbound: %d outbound: %d",
-					units[i].ExternalIP, servers[j].ExternalIP, measuredSpeed.InboundSpeed, measuredSpeed.OutboundSpeed)
-				if val, ok := mpServersSpeed[servers[j].ExternalIP]; ok {
-					if val.GetSum() < measuredSpeed.GetSum() {
-						mpServersSpeed[servers[j].ExternalIP] = speed{
-							InboundSpeed:  measuredSpeed.InboundSpeed,
-							OutboundSpeed: measuredSpeed.OutboundSpeed,
-						}
-					}
-				} else {
+			}
+			logrus.Infof("success measuring from client:%s to server:%s inbound: %d outbound: %d",
+				units[i].ExternalIP, servers[j].ExternalIP, measuredSpeed.InboundSpeed, measuredSpeed.OutboundSpeed)
+			if val, ok := mpServersSpeed[servers[j].ExternalIP]; ok {
+				if val.GetSum() < measuredSpeed.GetSum() {
 					mpServersSpeed[servers[j].ExternalIP] = speed{
 						InboundSpeed:  measuredSpeed.InboundSpeed,
 						OutboundSpeed: measuredSpeed.OutboundSpeed,
 					}
 				}
+			} else {
+				mpServersSpeed[servers[j].ExternalIP] = speed{
+					InboundSpeed:  measuredSpeed.InboundSpeed,
+					OutboundSpeed: measuredSpeed.OutboundSpeed,
+				}
+			}
 
-				if val, ok := mpUnitsSpeed[units[i].ExternalIP]; ok {
-					if val.GetSum() < measuredSpeed.GetSum() {
-						mpUnitsSpeed[units[i].ExternalIP] = speed{
-							InboundSpeed:  measuredSpeed.InboundSpeed,
-							OutboundSpeed: measuredSpeed.OutboundSpeed,
-						}
-					}
-				} else {
+			if val, ok := mpUnitsSpeed[units[i].ExternalIP]; ok {
+				if val.GetSum() < measuredSpeed.GetSum() {
 					mpUnitsSpeed[units[i].ExternalIP] = speed{
 						InboundSpeed:  measuredSpeed.InboundSpeed,
 						OutboundSpeed: measuredSpeed.OutboundSpeed,
 					}
+				}
+			} else {
+				mpUnitsSpeed[units[i].ExternalIP] = speed{
+					InboundSpeed:  measuredSpeed.InboundSpeed,
+					OutboundSpeed: measuredSpeed.OutboundSpeed,
 				}
 			}
 		}
@@ -139,7 +137,8 @@ func (s *Service) run(ctx context.Context) error {
 	for key, val := range mpUnitsSpeed {
 		s.measurementManager.AddData(key, val.InboundSpeed, val.OutboundSpeed)
 	}
-	return nil
+
+	logrus.Infof("success measuring map data: %s", s.measurementManager.GetAllData())
 }
 
 func (s *Service) measureSingleNode(ctx context.Context, fromNodeIP, toNodeExternalIP string) (speed, error) {
@@ -168,21 +167,7 @@ func (s *Service) measureSingleNode(ctx context.Context, fromNodeIP, toNodeExter
 	}
 
 	return speed{
-		InboundSpeed:  measureResp.InboundSpeed,
-		OutboundSpeed: measureResp.OutboundSpeed,
+		InboundSpeed:  measureResp.GetInboundSpeed(),
+		OutboundSpeed: measureResp.GetOutboundSpeed(),
 	}, nil
-}
-
-func getMaxSpeed(allSpeeds []speed) speed {
-	index := 0
-	maxSpeed := int64(0)
-
-	for i := range allSpeeds {
-		sp := allSpeeds[i].OutboundSpeed + allSpeeds[i].InboundSpeed
-		if sp > maxSpeed {
-			maxSpeed = sp
-			index = i
-		}
-	}
-	return allSpeeds[index]
 }
